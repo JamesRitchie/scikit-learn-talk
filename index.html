@@ -4,7 +4,7 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>reveal.js</title>
+		<title>Write your own scikit-learn package.</title>
 
 		<link rel="stylesheet" href="css/reveal.css">
 		<link rel="stylesheet" href="css/theme/black.css">
@@ -24,8 +24,138 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+				<section>
+					<h2>Write your own scikit-learn package</h2>
+					<h4>James Ritchie</h4>
+					<p style="display: flex;align-items: center;justify-content: center; margin: 20px 0px 0px 0px;">
+							<img src="img/twitter.svg" width="40" height="40" style="margin: 15px;background: none; border: none;"/>
+							<a href="https://twitter.com/JMSRTCH">@JMSRTCH</a>
+					</p>
+					<p style="display: flex;align-items: center;justify-content: center; margin: 0px;">
+						<img src="img/github.png" style="margin: 15px;background: none; border: none;"/>
+						<a href="https://github.com/JamesRitchie">@JamesRitchie</a>
+					</p>
+					<aside class="notes">
+						This talk is about why and how to write a scikit-learn package.
+						I'm going to assume most people here know what scikit-learn is.
+						I'm by no means an expert, this is just what I've learned writing my own package.
+						Easily enough material here for several full talks, but here's a collection of highlights,
+						and by highlights I mostly mean mistakes I made which hopefully you can avoid.
+					</aside>
+				</section>
+				<section>
+					<h2>scikit-rvm</h2>
+					<ul>
+						<li>Implementation of the Relevance Vector Machine algorithm</li>
+						<li>
+							Created by <a href="http://www.miketipping.com">Mike Tipping</a>, detailed in Chapter 7.2 of Bishop's
+							<a href="https://www.microsoft.com/en-us/research/people/cmbishop/">Pattern Recognition and Machine Learning</a>
+						</li>
+						<li>
+							<a href="https://github.com/JamesRitchie/scikit-rvm">
+								https://github.com/JamesRitchie/scikit-rvm
+							</a>
+						</li>
+					</ul>
+					<aside class="notes">
+						Not enough time to dive into the maths, but it's like a probabilistic Bayesian version of the SVM with a preference towards very sparse solutions.
+						Can also do regression, and is related to the ARD regressor scikit-learn core.
+					</aside>
+				</section>
+				<section>
+					<h2>Why?</h2>
+					<ul>
+						<li class="fragment">Fun</li>
+						<li class="fragment">Reputation</li>
+						<li class="fragment">Do a lightning talk on it, guaranteed space at PyData...</li>
+					</ul>
+					<aside class="notes">
+						Before we go into how, why should you roll your own scikit-learn estimator?
+						Fun: You can satisfy your intellectual curiosity. Writing an algorithm is a great way to improve your knowledge of ML algorithms and the scientific Python stack.
+						Rep: Implementing an algorithm as a well produced package is a great way to show off many of the skills you need as a proffesional data scientist.
+						Having scikit-rvm on my CV helped me land several interviews and got me my first proper data science job despite limited experience.
+						PyData: Most importantly, you can guarantee yourself a slot at PyData by offering to do a lightning talk and
+						avoid sitting it out on the waitlist for the inevitable rush of last minute declines.
+					</aside>
+				</section>
+				<section>
+					<img src='img/plot.png'style="margin: 15px;background: #FFFFFF; border: none;"/>
+				</section>
+				<section>
+					<h2 class="fragment">Step 1: Make it run correctly</h2>
+					<ul>
+						<li class="fragment">Implement a class with <code>fit</code> and <code>predict</code> methods</li>
+						<li class="fragment">Inherit from the relevant base classes/mixins.</li>
+						<li class="fragment">
+							Write tests
+							<ul>
+								<li class="fragment">Use trivial datasets</li>
+								<li class="fragment">Consider using benchmarks</li>
+							</ul>
+						</li>
+						<li class="fragment">Use the <code>check_estimator</code> function</li>
+						<li class="fragment">Consider using the <a href="https://github.com/scikit-learn-contrib/project-template">project template</a></li>
+						<li class="fragment">scikit-rvm classification was broken with uneven sample sizes!</li>
+					</ul>
+					<aside class="notes">
+						If you've every used scikit-learn, you know that estimators have a fit method and a predict method, and that's all you need for an MVP.
+						Inheritance: This lets you use your estimator with tools like pipelines.
+						Tests: How do you test something inherently non-deterministic? Use trivial examples e.g. two datapoints with an obvious optimal boundary.
+						Use benchmarks with a mimnimum required score to pass. If it drops, something might be broken.
+						First mistake, not using the template project. (I didn't know about it, so I wasted a lot of time bootstrapping layout, tests and CI)
+						My second mistake, not testing on uneven class sample sizes. This was fixed by a pull request from Jonathan Feinberg.
+					</aside>
+				</section>
+				<section>
+					<h2 class="fragment">Step 2: Use the best algorithm</h2>
+					<ul>
+						<li class="fragment">Look through the literature for improvements</li>
+						<li class="fragment">Better algorithms before low-level code optimisation!</li>
+						<li class="fragment">Move older versions into tests</li>
+						<li class="fragment">Example: Sequential sparse Bayes algorithm, avoids inverting very large matrices. (Cubic time complexity!!!)</li>
+					</ul>
+					<aside class="notes">
+						Now that it works correctly, time to do some low level optimizations? Not quite yet.
+						Look through author's work, papers citing the original paper.
+						If there's one thing you take away from this talk, make it this.
+						I first implemented the naive sparse algorithm. The sequential algorithm is much better, allows you to progressivly build up to a sparse matrix, rather than progressively reducing a large non-sparse
+						matrix, which takes cubic time complexity when inverting. No amount of low level optimisation can beat that.
+					</aside>
+				</section>
+				<section>
+					<h2 class="fragment">Step 3: Optimize your code</h2>
+					<ul>
+						<li class="fragment">Now you can break out the profiling tools!</li>
+						<li class="fragment">Remember to compare against the older versions.</li>
+						<li class="fragment">Use standard Numpy optimization techniques.</li>
+						<li class="fragment">Mathematical tricks may help with low level optimizations e.g. Woodbury Matrix Identity</li>
+					</ul>
+					<aside class="notes">
+						Don't necessarily expect Cython-ization and other compiling tricks to help.
+						E.g scikit-rvm spends most of its time inside the matrix inversion routine, which is already about as optimized as it can get.
+						Sometimes mathematical trick can combine with code optimization, e.g. W M I lets you compute inversions of low rank matrix updates with a smaller inversion,
+						allowing you to use a larger matrix continusouly and avoid reallocating memory by growing a matrix.
+						scikit-rvm spends a lot of time changing matrice size, which I can optimize out.
+					</aside>
+				</section>
+				<section>
+					<h2>Recap</h2>
+					<ol>
+						<li>Make it run correctly</li>
+						<li>Use the best algorithm</li>
+						<li>Optimize your code</li>
+					</ol>
+					<p>All of this is covered in the <a href="http://scikit-learn.org/stable/developers/index.html"> scikit-learn Developer Guide</a></p>
+				</section>
+				<section>
+					<h2>Questions?</h2>
+					<p style="display: flex;align-items: center;justify-content: center; margin: 20px;">
+						<img src="img/twitter.svg" width="40" height="40" style="margin: 15px;background: none; border: none;"/>
+						<a href="https://twitter.com/JMSRTCH">@JMSRTCH</a>
+					</p>
+					<p>p.s. We're hiring at <a href="https://www.marketinvoice.com">MarketInvoice</a>!</p>
+					<p><a href="mailto:j.ritchie@marketinvoice.com">j.ritchie@marketinvoice.com</a></p>
+				</section>
 			</div>
 		</div>
 

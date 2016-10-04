@@ -79,9 +79,6 @@
 					</aside>
 				</section>
 				<section>
-					<img src='img/plot.png'style="margin: 15px;background: #FFFFFF; border: none;"/>
-				</section>
-				<section>
 					<h2 class="fragment">Step 1: Make it run correctly</h2>
 					<ul>
 						<li class="fragment">Implement a class with <code>fit</code> and <code>predict</code> methods</li>
@@ -133,7 +130,7 @@
 					<aside class="notes">
 						Don't necessarily expect Cython-ization and other compiling tricks to help.
 						E.g scikit-rvm spends most of its time inside the matrix inversion routine, which is already about as optimized as it can get.
-						Sometimes mathematical trick can combine with code optimization, e.g. W M I lets you compute inversions of low rank matrix updates with a smaller inversion,
+						Sometimes mathematical tricks can combine with code optimization, e.g. W M I lets you compute inversions of low rank matrix updates with a smaller inversion,
 						allowing you to use a larger matrix continusouly and avoid reallocating memory by growing a matrix.
 						scikit-rvm spends a lot of time changing matrice size, which I can optimize out.
 					</aside>
